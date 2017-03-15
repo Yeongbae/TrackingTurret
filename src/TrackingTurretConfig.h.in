@@ -1,0 +1,2 @@
+#define TrackingTurret_VERSION_MAJOR @TrackingTurret_VERSION_MAJOR@
+#define TrackingTurret_VERSION_MINOR @TrackingTurret_VERSION_MINOR@
