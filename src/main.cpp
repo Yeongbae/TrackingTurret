@@ -14,7 +14,7 @@ cv::CascadeClassifier face_cascade;
 void DetectAndDisplay (cv::Mat);
 const std::string windowname("DISPLAYER");
 
-int main () {
+int main (int argc, char** argv) {
   cv::Mat frame;
   // Cascade setup
   if (!face_cascade.load("../data/haarcascades/haarcascade_frontalface_default.xml")) {
@@ -24,7 +24,12 @@ int main () {
   // Tracker setup
   cv::Ptr<cv::Tracker> tracker = cv::Tracker::create("KCF");
   // Device name; default in POSIX
-  std::string devName("/dev/video0");
+  std::string devName;
+  if (argc == 0) {
+    devName = "/dev/video0";
+  } else {
+    devName = argv[1];
+  }
   // Capture stream from device
   cv::VideoCapture devCapture(devName);
   // No stream = no run
@@ -59,10 +64,9 @@ void DetectAndDisplay (cv::Mat frame) {
   for (size_t i = 0; i < faces.size(); ++i) {
     cv::Point center(faces[i].x + faces[i].width*0.5,
                      faces[i].y + faces[i].height*0.5);
-    cv::ellipse(frame, center,
-                cv::Size(faces[i].width*0.5, faces[i].height*0.5),
-                0, 0, 360, cv::Scalar(0, 255, 0), 3, 8, 0);
-    cv::Mat faceROI = frame_gray(faces[i]);
+    cv::Rect roi(center.x-0.5*faces[i].width, center.y-0.5*faces[i].height,
+                 faces[i].width, faces[i].height);
+    cv::rectangle (frame, roi, cv::Scalar(0, 255, 0), 2, 1);
   }
   cv::imshow(windowname, frame);
 }
