@@ -25,7 +25,7 @@ int main (int argc, char** argv) {
   cv::Ptr<cv::Tracker> tracker = cv::Tracker::create("KCF");
   // Device name; default in POSIX
   std::string devName;
-  if (argc == 0) {
+  if (argc == 1) {
     devName = "/dev/video0";
   } else {
     devName = argv[1];
@@ -47,8 +47,8 @@ int main (int argc, char** argv) {
       std::cout << "Frame is empty." << std::endl;
     }
     DetectAndDisplay(frame);
-    int stop = cv::waitKey(40);
-    if (stop == 113) break;
+    int cmd = cv::waitKey(25);
+    if (cmd == 'q') break;
   }
   return 0;
 }
