@@ -1,6 +1,5 @@
 #include <iostream>
 #include <fstream>
-#include <sstream>
 #include <string>
 
 #include <opencv2/core.hpp>
@@ -10,63 +9,81 @@
 #include <opencv2/objdetect.hpp>
 
 cv::CascadeClassifier face_cascade;
+const std::string windowname("disp");
 
-void DetectAndDisplay (cv::Mat);
-const std::string windowname("DISPLAYER");
+cv::Mat Detect (cv::Mat, cv::Rect2d*);
 
 int main (int argc, char** argv) {
-  cv::Mat frame;
-  // Cascade setup
-  if (!face_cascade.load("../data/haarcascades/haarcascade_frontalface_default.xml")) {
-    std::cout << "Error loading face cascade." << std::endl;
-    return -1;
-  }
-  // Tracker setup
-  cv::Ptr<cv::Tracker> tracker = cv::Tracker::create("KCF");
-  // Device name; default in POSIX
-  std::string devName;
+  cv::Mat frame; // Will hold every frame for processing
+  cv::Mat dispf; // Product of process
+  cv::Ptr<cv::Tracker> tracker, newtracker; // Will hold tracker
+  cv::Rect2d roi; // Region of Interest
+  std::string device; // Will hold device name
+  int cmd = 0; // Will hold cmd input by waitKey
+  int iter = 0; // Will hold iteration no. for tracker reset
+  // First argument will be the device name
+  // If there is no argument, device will be set to DEFAULT IN POSIX
   if (argc == 1) {
-    devName = "/dev/video0";
+    device = "/dev/video0";
   } else {
-    devName = argv[1];
+    device = argv[1];
   }
-  // Capture stream from device
-  cv::VideoCapture devCapture(devName);
+  // Capture video from device
   // No stream = no run
-  if (!devCapture.isOpened()) {
-    std::cout << "Cannot open device." << std::endl;
-    return -1;
+  cv::VideoCapture videostream(device);
+  if (!videostream.isOpened()) {
+    std::cout << "Cannot open video stream from " << device << std::endl;
+    return 1;
   }
-  // Create window
+  // Face cascade setup
+  if (!face_cascade.load("../data/haarcascades/haarcascade_frontalface_alt.xml")) {
+    std::cout << "Error loading face cascade." << std::endl;
+    return 2;
+  }
+  // Create display windowname
   cv::namedWindow(windowname, cv::WINDOW_KEEPRATIO);
   // Stream image
-  std::cout << "Press 'q' to quit" << std::endl;
-  while (1) {
-    devCapture >> frame;
-    if (frame.empty()) {
-      std::cout << "Frame is empty." << std::endl;
+  // Q to quit
+  // R to reset roi
+  videostream >> frame;
+  dispf = Detect(frame, &roi);
+  // tracker->init(frame, roi);
+  // tracker = newtracker;
+  // newtracker->~Tracker;
+  cv::imshow(windowname, dispf);
+  cmd = cv::waitKey(25);
+  do {
+    if (cmd != 'r') {
+      videostream >> frame;
+      dispf = Detect(frame, &roi);
+      // tracker->init(dispf, roi);
+      // tracker = newtracker;
+      // newtracker->~Tracker;
+    } else {
+      // tracker->update(dispf, roi);
+      // cv::rectangle(frame, roi, cv::Scalar(255, 0, 0), 2, 1);
     }
-    DetectAndDisplay(frame);
-    int cmd = cv::waitKey(25);
-    if (cmd == 'q') break;
-  }
+    // cv::imshow(windowname, dispf);
+    cmd = cv::waitKey(25);
+  } while (cmd != 'q');
   return 0;
 }
 
-void DetectAndDisplay (cv::Mat frame) {
+cv::Mat Detect (cv::Mat frame, cv::Rect2d* proi) {
   std::vector<cv::Rect> faces;
-  cv::Mat frame_gray;
-  cv::cvtColor(frame, frame_gray, CV_BGR2GRAY);
-  cv::equalizeHist(frame_gray, frame_gray);
-  // Detection
-  face_cascade.detectMultiScale(frame_gray, faces, 1.1, 2,
-                                0|CV_HAAR_SCALE_IMAGE, cv::Size(30,30));
+  cv::Mat grayframe, dispframe;
+  dispframe = frame;
+  cv::cvtColor(frame, grayframe, CV_BGR2GRAY);
+  cv::equalizeHist(grayframe, grayframe);
+  face_cascade.detectMultiScale(grayframe, faces, 1.1, 2,
+                                0|CV_HAAR_SCALE_IMAGE, cv::Size(30, 30));
   for (size_t i = 0; i < faces.size(); ++i) {
-    cv::Point center(faces[i].x + faces[i].width*0.5,
-                     faces[i].y + faces[i].height*0.5);
-    cv::Rect roi(center.x-0.5*faces[i].width, center.y-0.5*faces[i].height,
+    cv::Point center(faces[i].x+faces[i].width*0.5,
+                     faces[i].y+faces[i].height*0.5);
+    cv::Rect2d roi(center.x-0.5*faces[i].width, center.y-0.5*faces[i].height,
                  faces[i].width, faces[i].height);
-    cv::rectangle (frame, roi, cv::Scalar(0, 255, 0), 2, 1);
+    cv::rectangle (dispframe, roi, cv::Scalar(0, 255, 0), 2, 1);
+    roi = *proi;
   }
-  cv::imshow(windowname, frame);
+  return dispframe;
 }
