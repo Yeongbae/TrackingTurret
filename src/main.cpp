@@ -17,6 +17,7 @@ int main (int argc, char** argv) {
   cv::Mat frame; // Will hold every frame for processing
   cv::Mat dispf; // Product of process
   cv::Ptr<cv::Tracker> tracker = cv::Tracker::create("KCF"); // Will hold tracker
+  cv::Ptr<cv::Tracker> newtracker = cv::Tracker::create("KCF");
   cv::Rect2d roi; // Region of Interest
   std::string device; // Will hold device name
   int cmd = 0; // Will hold cmd input by waitKey
@@ -47,21 +48,25 @@ int main (int argc, char** argv) {
   // R to reset roi
   videostream >> frame;
   dispf = Detect(frame, &roi);
+  tracker->init(dispf, roi);
   cv::imshow(windowname, dispf);
   cmd = cv::waitKey(25);
   do {
-    tracker->init(dispf, roi);
-    if (cmd == 'r') {
-      videostream >> frame;
+    videostream >> frame;
+    if (cmd == 'r' || iter == 99) {
+      tracker->clear();
+      tracker = newtracker;
       dispf = Detect(frame, &roi);
+      tracker->init(dispf, roi);
+      iter = 0;
     } else {
-      videostream >> frame;
       dispf = frame;
       tracker->update(dispf, roi);
       cv::rectangle(frame, roi, cv::Scalar(255, 0, 0), 2, 1);
     }
     cv::imshow(windowname, dispf);
-    cmd = cv::waitKey(25);
+    cmd = cv::waitKey(20);
+    ++iter;
   } while (cmd != 'q');
   return 0;
 }
